@@ -15,3 +15,17 @@ int main() {
 
     return 0;
 }
+
+DataReceiver receiver;
+
+void setup() {
+    Serial.begin(115200);
+    receiver.begin();
+    Serial.println("Start systemu...");
+}
+
+void loop() {
+    receiver.update();
+    sm.update();
+    delay(100);
+}
