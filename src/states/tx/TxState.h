@@ -12,6 +12,8 @@ public:
     CommState getStateId() const override {
         return CommState::Idle;
     }
+
+    
 };
 
 #endif // IDLESTATE_H

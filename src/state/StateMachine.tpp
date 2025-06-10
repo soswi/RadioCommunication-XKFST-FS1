@@ -1,26 +1,27 @@
+// FILE: src/state/StateMachine.tpp
+
 #ifndef STATEMACHINE_TPP
 #define STATEMACHINE_TPP
 
 #include "StateMachine.h"
-#include <iostream>
+// Note: Do NOT include StateMachine.h here to avoid circular inclusion.
+// The header already includes this file.
 
+// Template definition for the constructor
+template <typename StateIdType>
 template <typename... States>
-StateMachine::StateMachine(States&&... states)
-    : currentState_(CommState::Idle)
+StateMachine<StateIdType>::StateMachine(StateIdType initialState, States&&... states)
+    : currentState_(initialState) // Use the provided initial state
 {
-    // Use a fold expression to insert all states into the map
-    // We move each state into a unique_ptr and store keyed by getStateId()
-    (void)std::initializer_list<int>{
-        ( 
-            states_.emplace(
-                states.getStateId(), 
-                std::make_unique<std::remove_reference_t<decltype(states)>>(std::forward<States>(states))
-            )->second->setStateMachine(this),
-        0)...
-    };
+    ( (void)states_.emplace(
+        states.getStateId(),
+        std::make_unique<std::remove_reference_t<decltype(states)>>(std::forward<States>(states))
+    ).first->second->setStateMachine(this), ... );
 }
 
-State* StateMachine::findState(CommState id) {
+// Template definition for findState
+template <typename StateIdType>
+State<StateIdType>* StateMachine<StateIdType>::findState(StateIdType id) {
     auto it = states_.find(id);
     if (it != states_.end()) {
         return it->second.get();
@@ -28,20 +29,24 @@ State* StateMachine::findState(CommState id) {
     return nullptr;
 }
 
-void StateMachine::setState(CommState newState) {
+// Template definition for setState
+template <typename StateIdType>
+void StateMachine<StateIdType>::setState(StateIdType newState) {
     currentState_ = newState;
 }
 
-void StateMachine::update() {
-    State* current = findState(currentState_);
+// Template definition for update
+template <typename StateIdType>
+void StateMachine<StateIdType>::update() {
+    State<StateIdType>* current = findState(currentState_);
     if (current) {
         current->handle();
-    } else {
-        std::cerr << "Error: State not found!\n";
     }
 }
 
-CommState StateMachine::getCurrentState() const {
+// Template definition for getCurrentState
+template <typename StateIdType>
+StateIdType StateMachine<StateIdType>::getCurrentState() const {
     return currentState_;
 }
 

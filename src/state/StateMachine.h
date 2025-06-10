@@ -1,30 +1,31 @@
+// FILE: src/state/StateMachine.h
+
 #ifndef STATEMACHINE_H
 #define STATEMACHINE_H
 
-#include <unordered_map>
-#include <memory>
-#include <utility> // for std::forward
 #include "State.h"
+#include <memory>
+#include <unordered_map>
+#include <Arduino.h>
 
+template <typename StateIdType>
 class StateMachine {
 public:
-    // Variadic template constructor accepting any number of State-derived objects
     template <typename... States>
-    explicit StateMachine(States&&... states);
+    explicit StateMachine(StateIdType initialState, States&&... states);
 
-    void setState(CommState newState);
-
+    void setState(StateIdType newState);
+    StateIdType getCurrentState() const;
     void update();
 
-    CommState getCurrentState() const;
-
 private:
-    std::unordered_map<CommState, std::unique_ptr<State>> states_;
-    CommState currentState_;
+    State<StateIdType>* findState(StateIdType id);
 
-    State* findState(CommState id);
+    std::unordered_map<StateIdType, std::unique_ptr<State<StateIdType>>> states_;
+    StateIdType currentState_;
 };
 
-#include "StateMachine.tpp"  // Implementation of template constructor
+// Include the implementation file at the end
+#include "StateMachine.tpp"
 
 #endif // STATEMACHINE_H
