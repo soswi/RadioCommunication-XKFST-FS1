@@ -1,7 +1,7 @@
 #ifndef COMMSTATE_H
 #define COMMSTATE_H
 
-enum class CommState {
+enum class ExampleStates {
     Idle,
     Sync,
     Tx,

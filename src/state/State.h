@@ -1,29 +1,28 @@
+// FILE: State.h
+
 #ifndef STATE_H
 #define STATE_H
 
-#include "CommState.h"
-
+// Forward declare the StateMachine template
+template <typename StateIdType>
 class StateMachine;
 
+template <typename StateIdType>
 class State {
 public:
-    // Virtual destructor
     virtual ~State() = default;
-
-    // Pure virtual method to handle state logic
     virtual void handle() = 0;
 
-    // Each state must identify itself by returning its CommState enum
-    virtual CommState getStateId() const = 0;
+    // This is now a regular virtual function that returns the template type.
+    // Each state machine instance will have its own specific IdType.
+    virtual StateIdType getStateId() const = 0;
 
-protected:
-    StateMachine* machine_ = nullptr;
-
-public:
-    // Setter for StateMachine pointer (to allow transitions)
-    void setStateMachine(StateMachine* machine) {
+    void setStateMachine(StateMachine<StateIdType>* machine) {
         machine_ = machine;
     }
+
+protected:
+    StateMachine<StateIdType>* machine_ = nullptr;
 };
 
 #endif // STATE_H
