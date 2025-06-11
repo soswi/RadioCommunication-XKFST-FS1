@@ -4,36 +4,46 @@
 #include "states/idle/IdleState.h"
 #include "states/sync/SyncState.h"
 
-// Let's assume you have a flag to trigger sending
+// A flag to simulate that data has become available for sending.
 bool hasDataToSend = false;
 
-// The state machine needs a pointer to be accessed globally
-// We use a pointer to allow for proper initialization in setup()
+// A global pointer to the state machine instance.
+// Using a pointer allows for its proper initialization within the setup() function,
+// which is crucial for handling complex objects in the Arduino environment.
 StateMachine<MasterStates>* stateMachine;
 
 void setup() {
+    // Initialize serial communication for debugging.
     Serial.begin(115200);
-    while (!Serial); // Wait for Serial to be available
+    while (!Serial); // Wait for the serial port to connect. Needed for native USB.
 
     Serial.println("System initialized. Creating State Machine...");
 
-    // Correctly instantiate the state machine and its states
+    // Dynamically allocate and instantiate the state machine with its states.
+    // This is the correct way to initialize the templated StateMachine and its
+    // corresponding templated State objects.
     stateMachine = new StateMachine<MasterStates>(
-        MasterStates::Idle,
-        IdleState<MasterStates>(),     
-        SyncState<MasterStates>()       
+        MasterStates::Idle,         // The initial state of the machine.
+        IdleState<MasterStates>(),  // An instance of the Idle state.
+        SyncState<MasterStates>()   // An instance of the Sync state.
     );
 
     Serial.println("State Machine created. Initial state: Idle");
 }
 
 void loop() {
-    // Simulate a trigger to start the communication
+    // This block simulates an external event (e.g., data arriving in a queue)
+    // that triggers the need for a state transition.
     if (millis() > 5000 && !hasDataToSend) {
         Serial.println("\n[SIMULATION] Data is now available to send. Triggering state change...");
         hasDataToSend = true;
     }
 
+    // The main workhorse of the application.
+    // This calls the handle() method of the current state.
     stateMachine->update();
-    delay(500); // Slow down execution for clarity
+
+    // A small delay to slow down the loop's execution, making the serial
+    // output easier to read and follow during debugging.
+    delay(500);
 }
