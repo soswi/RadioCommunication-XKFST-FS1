@@ -1,73 +1,68 @@
-# 🧭 Instrukcja (PL)
+ESP32-C3 Custom 433MHz Radio Communication Protocol
+📡 Goal
+This project aims to establish a robust, low-level radio communication protocol between two ESP32-C3 microcontrollers using simple 433 MHz ASK/OOK RF modules (FS1000A transmitter + MX-05V receiver). The primary focus is on creating a reliable synchronization and data framing mechanism from scratch, without relying on high-level libraries like VirtualWire or RadioHead.
 
-Ten projekt to komunikacja radiowa między dwoma mikrokontrolerami ESP32-C3 za pomocą modułów 433 MHz (FS1000A i MX-05V). Kod jest pisany w Arduino IDE, a celem jest stworzenie solidnego, ramkowego protokołu z synchronizacją, CRC, potwierdzeniami i możliwością dzielenia wiadomości na pakiety.
+🏛️ Core Architecture
+The project is built upon a flexible and powerful event-driven architecture centered around a generic, template-based Finite State Machine (FSM).
 
-Zostałeś przypisany do zadania związanego z tym projektem. ChatGPT wcześniej utworzył strukturę repozytorium i opisał założenia. Twoje zadanie zostanie zaraz określone. Wszystko — kod, komentarze, dokumentacja — piszemy **po angielsku**.
+Generic FSM: The StateMachine class is a reusable template that can manage any set of states defined by an enum class. This allows for creating multiple, independent FSMs within the project.
 
----
+Nested State Machines: To manage complexity, the system uses a nested FSM approach. A main FSM (MasterStates) handles the top-level application flow (Idle, Sync), while the SyncState itself contains a dedicated sub-FSM (SyncStates) to manage the intricate steps of the synchronization protocol.
 
-# ESP32 433MHz Radio Communication Protocol (EN)
+Task-Based Transitions: State transitions are event-driven, primarily by hardware interrupts. A transition can be accompanied by a "task" payload (std::any), which instructs the new state on how to initialize itself (e.g., whether to act as a synchronization INITIATOR or REQUESTER).
 
-## 📡 Goal
+🤝 Custom Synchronization Protocol
+A custom, two-way handshake protocol has been implemented to ensure both devices are precisely synchronized before any data is exchanged.
 
-Establish a robust bit-level communication protocol between two ESP32-C3 microcontrollers using 433 MHz RF modules (FS1000A transmitter + MX-05V receiver). The protocol includes frame-based transmission, CRC validation, acknowledgment handling, and message fragmentation.
+The protocol flow is as follows:
 
-## 🧱 Protocol Features
+Initiation (by Initiator):
 
-- Bit-level TX/RX over GPIO
-- Synchronization and handshake at startup
-- Addressed packets with source/destination fields
-- Multi-packet framing for long messages (fragmentation)
-- CRC validation (CRC-8 or CRC-16)
-- ACK/NACK response with retransmission logic
-- Finite State Machine managing all communication stages
+The Initiator (e.g., triggered by a button press) sends a long (15-20ms) initial pulse to "wake up" any listening devices.
 
-## 📦 Frame Structure
+Preamble for Clock Discovery (by Initiator):
 
-| Field      | Size (bytes) | Description                      |
-|------------|--------------|----------------------------------|
-| SYNC       | 1            | Synchronization byte             |
-| SRC_ADDR   | 1            | Sender address                   |
-| DST_ADDR   | 1            | Receiver address                 |
-| TYPE       | 1            | Frame type (DATA, ACK, etc.)     |
-| PKT_ID     | 1            | Packet index in multi-part frame |
-| PKT_CNT    | 1            | Total number of packets          |
-| LENGTH     | 1            | Length of PAYLOAD in bytes       |
-| PAYLOAD    | up to 32     | Message fragment                 |
-| CRC        | 1            | CRC checksum                     |
-| ACK_FLAG   | 1            | Acknowledgment bit (1=ACK, 0=NACK) |
+Immediately following the initial pulse, the Initiator sends a burst of short, fixed-width pulses.
 
-## 🔄 Communication Flow
+Measurement (by Receiver):
 
-### Sender
-1. Perform clock synchronization
-2. Initiate handshake
-3. Fragment and send message frames
-4. Wait for ACK after each packet
-5. Retry or continue depending on ACK/NACK
+The Receiver, woken from its Idle state by an interrupt, detects the initial pulse.
 
-### Receiver
-1. Perform clock synchronization
-2. Acknowledge handshake
-3. Receive and buffer message fragments
-4. Validate CRC, send ACK/NACK
-5. Assemble complete message
+It then measures the duration of the incoming preamble pulses to calculate the average pulse width, effectively discovering the Initiator's transmission speed.
 
-## 🧩 Repository Structure
+Confirmation (by Receiver):
 
-RadioCommunication-XKFST-FS1/
-│
-├── /docs/
-│ └── protocol.md # Full protocol description
-├── /receiver/
-│ └── receiver.ino # Receiver logic
-├── /transmitter/
-│ └── transmitter.ino # Transmitter logic
-├── /lib/
-│ ├── crc_utils.h # CRC functions
-│ ├── state_machine.h # Finite state machine
-│ ├── radio_utils.h # Bit-level GPIO TX/RX
-│ └── packet_utils.h # Message fragmenting/assembling
-├── .gitignore
-├── LICENSE
-└── README.md # Project overview
+If the measurement is successful, the Receiver sends back its own long (20-25ms) confirmation pulse, signaling "I have your timing".
+
+Final Trigger (by Initiator):
+
+The Initiator detects the confirmation pulse and sends one final, short trigger pulse.
+
+Synchronized Action:
+
+Both the Initiator and Receiver receive the final trigger pulse. This pulse acts as a shared "starting gun".
+
+Upon receiving this trigger, both devices start a precise, non-blocking hardware timer (esp_timer). When the timer fires, they execute a synchronized action (blinking an LED), visually confirming that their clocks are aligned.
+
+🚀 How to Test
+The system is designed to be triggered by real-world events:
+
+Become a Receiver: An interrupt on RX_PIN (GPIO 4) is triggered by incoming radio signals, which automatically transitions the device into the Sync state with a REQUEST task.
+
+Become an Initiator: An interrupt on BUTTON_PIN (GPIO 3) is triggered by a button press, which transitions the device into the Sync state with an INITIATE task.
+
+To test, upload the code to two ESP32-C3 devices and press the button on one. You should see a sequence of log messages on the serial monitors, culminating in a simultaneous LED blink on both devices.
+
+📁 Project Structure
+src/: Main application source (.ino).
+
+src/state/: Core, reusable FSM classes (StateMachine.h, State.h).
+
+src/states/: Definitions for all concrete states and sub-states.
+
+StateIds.h: Contains all enum definitions for state identifiers.
+
+sync/SyncState.cpp: A consolidated file containing the logic for the Sync state and all its synchronization sub-states.
+
+🔮 Future Work
+With the synchronization protocol successfully implemented, the next step is to build out the TxState and RxState to handle the transmission and reception of actual data packets, including payload framing, CRC checksums, and an ACK/NACK mechanism.
