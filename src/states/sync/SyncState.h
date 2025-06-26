@@ -3,6 +3,8 @@
 
 #include "state/State.h"
 #include "states/StateIds.h"
+#include <any>
+
 
 /**
  * @class SyncState
@@ -19,7 +21,12 @@ public:
     /**
      * @brief Default constructor.
      */
-    SyncState() = default;
+
+    SyncState();
+
+    ~SyncState() override{
+        delete subMachine_;
+    };
 
     /**
      * @brief The main execution handler for this state.
@@ -36,6 +43,19 @@ public:
     StateIdType getStateId() const override {
         return StateIdType::Sync;
     }
+
+protected:
+    friend class StateMachine<StateIdType>; // Allow StateMachine to access private members
+    StateMachine<SyncStates>* subMachine_ = nullptr;
 };
+
+template<typename SubStateIdType>
+class IdleSyncSubState;
+
+template<typename SubStateIdType>
+class RequestSyncSubState;
+
+template<typename SubStateIdType>
+class InitiateSyncSubState;
 
 #endif // SYNCSTATE_H

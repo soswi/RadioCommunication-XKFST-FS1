@@ -9,6 +9,7 @@ enum class MasterStates {
 };
 
 enum class SyncStates {
+    Idle,
     Request,
     Initiate
 };

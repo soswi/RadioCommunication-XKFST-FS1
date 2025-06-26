@@ -15,14 +15,32 @@ public:
     explicit StateMachine(StateIdType initialState, States&&... states);
 
     void setState(StateIdType newState);
-    StateIdType getCurrentState() const;
+    void setState(StateIdType newState, std::any newTask);
+
+    StateIdType getCurrentStateId() const;
+    StateIdType getPreviousStateId() const;
+
     void update();
 
 private:
-    State<StateIdType>* findState(StateIdType id);
+    // Finds a state pointer in the map and sets currentState_ pointer.
+    void findAndSetCurrentState(StateIdType id);
 
+    void setCurrentStateTask();
+
+    // Map storing all available states.
     std::unordered_map<StateIdType, std::unique_ptr<State<StateIdType>>> states_;
-    StateIdType currentState_;
+    
+    // Pointer to the currently active state object.
+    State<StateIdType>* currentState_ = nullptr;
+    
+    // IDs for tracking state transitions.
+    StateIdType currentStateId_;
+    StateIdType previousStateId_;
+
+    std::any currentStateTask_; // Placeholder for any job or task related to the current state
+
+
 };
 
 // Include the implementation file at the end
