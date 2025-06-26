@@ -24,9 +24,7 @@ public:
 
     SyncState();
 
-    ~SyncState() override{
-        delete subMachine_;
-    };
+    ~SyncState() override;
 
     /**
      * @brief The main execution handler for this state.
